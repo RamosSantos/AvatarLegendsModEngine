@@ -161,18 +161,6 @@ _FRAGMENTS = {
     "Arquivos extra\u00eddos para:\n": "Files extracted to:\\n",
 }
 
-_PT_FIXES = {
-    "Selecionar�": "Selecionar...", "Extrair pacote�": "Extrair pacote...",
-    "Substituir arquivo selecionado�": "Substituir arquivo selecionado...",
-    "Configurar ferramentas MUNGED�": "Configurar ferramentas MUNGED...",
-    "Navegar anima��es�": "Navegar animações...", "Aplicar MUNGED editado�": "Aplicar MUNGED editado...",
-    "Validar �rea de trabalho": "Validar área de trabalho", "Reconstruir pacote modificado�": "Reconstruir pacote modificado...",
-    "Idioma:": "Idioma:", "Inglês": "Inglês",
-    "Aplicar substitutos selecionados�": "Aplicar substitutos selecionados...",
-    "Frames em ordem natural (Ctrl/Shift para selecionar)": "Frames em ordem natural (Ctrl/Shift para selecionar)",
-    "Navegador indispon�vel": "Navegador indisponível", "Pasta inv�lida": "Pasta inválida",
-}
-
 def _repair_legacy_text(value: str) -> str:
     """Normalize common mojibake spellings in older interface literals."""
     pairs = {
@@ -192,6 +180,22 @@ def _repair_legacy_text(value: str) -> str:
 
 EN = {_repair_legacy_text(key): _repair_legacy_text(value) for key, value in EN.items()}
 _PATTERNS = [(re.compile(_repair_legacy_text(pattern.pattern), pattern.flags), _repair_legacy_text(replacement)) for pattern, replacement in _PATTERNS]
+PT_ENGLISH = {
+    "Package workspace for frame preview, replacement, validation, and profiles.": "Área de trabalho para visualizar, substituir e validar frames, e gerenciar perfis.",
+    "Game and package": "Jogo e pacote", "Package actions": "Ações de pacote", "Asset tools": "Ferramentas de assets",
+    "Workspace": "Área de trabalho", "Mod profiles": "Perfis de mod", "Workspace changes are backed up": "Alterações da área de trabalho têm backup",
+    "Undo": "Desfazer", "Redo": "Refazer",
+    "Undo  Ctrl+Z": "Desfazer  Ctrl+Z", "Redo  Ctrl+Y": "Refazer  Ctrl+Y",
+    "Nothing to undo in this workspace.": "Nada para desfazer neste workspace.",
+    "Nothing to redo in this workspace.": "Nada para refazer neste workspace.",
+    "History action failed": "Falha na ação do histórico",
+    "History conflict": "Conflito no histórico",
+}
+PT_PATTERNS = [
+    (re.compile(r"^Cannot (undo|redo): (.+) changed outside the history\. Review the workspace before continuing\.$"),
+     r"Não é possível desfazer/refazer: \2 foi alterado fora do histórico. Revise a área de trabalho antes de continuar."),
+    (re.compile(r"^History snapshot is missing or damaged for (.+)\.$"), r"O snapshot do histórico está ausente ou danificado para \1."),
+]
 
 
 def set_language(language: str) -> None:
@@ -203,7 +207,13 @@ def tr(value):
     if not isinstance(value, str):
         return value
     if LANGUAGE == "pt":
-        return _PT_FIXES.get(value, value)
+        translated = PT_ENGLISH.get(value)
+        if translated is not None:
+            return translated
+        for pattern, replacement in PT_PATTERNS:
+            if pattern.match(value):
+                return pattern.sub(replacement, value)
+        return value
     value_for_lookup = _repair_legacy_text(value)
     translated = EN.get(value_for_lookup)
     if translated is not None:
@@ -226,7 +236,7 @@ def install() -> None:
         return
     install.installed = True
 
-    for name in ("Label", "Button", "Checkbutton", "Radiobutton", "Labelframe"):
+    for name in ("Label", "Button", "Checkbutton", "Radiobutton", "LabelFrame"):
         original = getattr(ttk, name)
         def make_factory(factory):
             def translated_factory(*args, **kwargs):

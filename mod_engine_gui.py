@@ -39,8 +39,8 @@ class ModEngineGUI(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Avatar Legends Mod Engine")
-        self.geometry("1280x720")
-        self.minsize(980, 560)
+        self.geometry("1380x820")
+        self.minsize(1120, 740)
 
         self.game_dir = tk.StringVar(value=str(DEFAULT_GAME))
         self.filter_text = tk.StringVar()
@@ -53,6 +53,7 @@ class ModEngineGUI(tk.Tk):
         self.current_package: dict[str, object] | None = None
         self.entries_by_iid: dict[str, dict[str, object]] = {}
         self.results: queue.Queue = queue.Queue()
+        self.animation_browsers = []
 
         self._build()
         if self.tools_dir.get():
@@ -103,78 +104,109 @@ class ModEngineGUI(tk.Tk):
             parser.write(stream)
 
     def _build(self) -> None:
-        root = ttk.Frame(self, padding=12)
+        root = ttk.Frame(self, padding=(18, 14))
         root.pack(fill="both", expand=True)
 
-        ttk.Label(root, text="Pasta do jogo:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(root, textvariable=self.game_dir).grid(row=0, column=1, sticky="ew", padx=8)
-        ttk.Button(root, text="Selecionar…", command=self._choose_game).grid(row=0, column=2, padx=3)
-        ttk.Button(root, text="Procurar .pak", command=self._scan).grid(row=0, column=3, padx=3)
-        language_frame = ttk.Frame(root)
-        language_frame.grid(row=0, column=4, sticky="e", padx=(12, 0))
-        ttk.Label(language_frame, text="Idioma:").pack(side="left", padx=(0, 5))
+        header = ttk.Frame(root)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        brand = ttk.Frame(header)
+        brand.pack(side="left", fill="x", expand=True)
+        ttk.Label(brand, text="Avatar Legends Mod Engine", style="AppTitle.TLabel").pack(anchor="w")
+        ttk.Label(brand, text="Package workspace for frame preview, replacement, validation, and profiles.", style="AppSubtitle.TLabel").pack(anchor="w", pady=(2, 0))
+        language_frame = ttk.Frame(header)
+        language_frame.pack(side="right", anchor="n", pady=(7, 0))
+        ttk.Label(language_frame, text="Idioma:").pack(side="left", padx=(0, 6))
         language_values = ("English", "Português") if self.language.get() == "en" else ("Inglês", "Português")
         self.language_box = ttk.Combobox(language_frame, state="readonly", width=11, values=language_values)
         self.language_box.set(language_values[0] if self.language.get() == "en" else language_values[1])
         self.language_box.pack(side="left")
         self.language_box.bind("<<ComboboxSelected>>", self._change_language)
 
-        ttk.Label(root, text="Pacote:").grid(row=1, column=0, sticky="w", pady=(10, 0))
-        self.package_box = ttk.Combobox(root, state="readonly")
-        self.package_box.grid(row=1, column=1, columnspan=3, sticky="ew", padx=8, pady=(10, 0))
+        selection = ttk.LabelFrame(root, text="Game and package", style="Section.TLabelframe")
+        selection.grid(row=1, column=0, sticky="ew", pady=(0, 9))
+        ttk.Label(selection, text="Pasta do jogo:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(selection, textvariable=self.game_dir).grid(row=0, column=1, sticky="ew", padx=8)
+        ttk.Button(selection, text="Selecionar…", command=self._choose_game).grid(row=0, column=2, padx=(0, 5))
+        ttk.Button(selection, text="Procurar .pak", style="Accent.TButton", command=self._scan).grid(row=0, column=3)
+        ttk.Label(selection, text="Pacote:").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        self.package_box = ttk.Combobox(selection, state="readonly")
+        self.package_box.grid(row=1, column=1, columnspan=3, sticky="ew", padx=8, pady=(8, 0))
         self.package_box.bind("<<ComboboxSelected>>", self._load_package)
+        selection.columnconfigure(1, weight=1)
 
-        ttk.Label(root, text="Filtro de caminho:").grid(row=2, column=0, sticky="w", pady=(10, 0))
-        filter_entry = ttk.Entry(root, textvariable=self.filter_text)
-        filter_entry.grid(row=2, column=1, sticky="ew", padx=8, pady=(10, 0))
+        browse = ttk.Frame(root)
+        browse.grid(row=2, column=0, sticky="ew", pady=(0, 4))
+        ttk.Label(browse, text="Filtro de caminho:").pack(side="left")
+        filter_entry = ttk.Entry(browse, textvariable=self.filter_text)
+        filter_entry.pack(side="left", fill="x", expand=True, padx=8)
         filter_entry.bind("<KeyRelease>", lambda _event: self._populate_entries())
-        self.count_label = ttk.Label(root, text="Nenhum pacote carregado")
-        self.count_label.grid(row=2, column=2, columnspan=2, sticky="e", pady=(10, 0))
+        self.count_label = ttk.Label(browse, text="Nenhum pacote carregado")
+        self.count_label.pack(side="right")
 
+        table = ttk.Frame(root)
+        table.grid(row=3, column=0, sticky="nsew", pady=(4, 10))
         columns = ("path", "size", "offset")
-        self.tree = ttk.Treeview(root, columns=columns, show="headings", selectmode="browse")
+        self.tree = ttk.Treeview(table, columns=columns, show="headings", selectmode="browse")
         self.tree.heading("path", text="Arquivo dentro do pacote")
         self.tree.heading("size", text="Tamanho (bytes)")
         self.tree.heading("offset", text="Offset")
-        self.tree.column("path", width=600, anchor="w")
-        self.tree.column("size", width=130, anchor="e")
-        self.tree.column("offset", width=130, anchor="e")
-        self.tree.grid(row=3, column=0, columnspan=4, sticky="nsew", pady=10)
-        scrollbar = ttk.Scrollbar(root, orient="vertical", command=self.tree.yview)
-        scrollbar.grid(row=3, column=4, sticky="ns", pady=10)
+        self.tree.column("path", width=660, anchor="w")
+        self.tree.column("size", width=145, anchor="e")
+        self.tree.column("offset", width=145, anchor="e")
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar = ttk.Scrollbar(table, orient="vertical", command=self.tree.yview)
+        scrollbar.pack(side="right", fill="y")
         self.tree.configure(yscrollcommand=scrollbar.set)
 
-        buttons = ttk.Frame(root)
-        buttons.grid(row=4, column=0, columnspan=4, sticky="w")
-        ttk.Button(buttons, text="Extrair pacote…", command=self._extract).pack(side="left", padx=(0, 8))
-        ttk.Button(buttons, text="Substituir arquivo selecionado…", command=self._replace).pack(side="left")
+        actions = ttk.Frame(root)
+        actions.grid(row=4, column=0, sticky="ew")
+        package_actions = ttk.LabelFrame(actions, text="Package actions", style="Section.TLabelframe")
+        package_actions.grid(row=0, column=0, sticky="nsew", padx=(0, 6), pady=(0, 6))
+        ttk.Button(package_actions, text="Extrair pacote…", style="Toolbar.TButton", command=self._extract).grid(row=0, column=0, padx=(0, 6), sticky="ew")
+        ttk.Button(package_actions, text="Substituir arquivo selecionado…", style="Toolbar.TButton", command=self._replace).grid(row=0, column=1, sticky="ew")
+        for column in (0, 1):
+            package_actions.columnconfigure(column, weight=1)
 
-        frame_tools = ttk.Frame(root)
-        frame_tools.grid(row=5, column=0, columnspan=4, sticky="w", pady=(9, 0))
-        ttk.Button(frame_tools, text="Configurar ferramentas MUNGED…", command=self._choose_tools).pack(side="left", padx=(0, 8))
-        ttk.Button(frame_tools, text="Visualizar frame MUNGED", command=self._preview_munged).pack(side="left", padx=(0, 8))
-        ttk.Button(frame_tools, text="Navegar animações…", command=self._open_animation_browser).pack(side="left", padx=(0, 8))
-        ttk.Button(frame_tools, text="Aplicar MUNGED editado…", command=self._stage_munged).pack(side="left", padx=(0, 8))
-        ttk.Button(frame_tools, text="Abrir pasta de trabalho", command=self._open_workspace).pack(side="left", padx=(0, 8))
-        ttk.Button(frame_tools, text="Validar área de trabalho", command=self._validate_workspace).pack(side="left", padx=(0, 8))
-        ttk.Button(frame_tools, text="Reconstruir pacote modificado…", command=self._rebuild_package).pack(side="left")
+        asset_actions = ttk.LabelFrame(actions, text="Asset tools", style="Section.TLabelframe")
+        asset_actions.grid(row=0, column=1, sticky="nsew", padx=(6, 0), pady=(0, 6))
+        ttk.Button(asset_actions, text="Configurar ferramentas MUNGED…", style="Toolbar.TButton", command=self._choose_tools).grid(row=0, column=0, padx=(0, 5), pady=(0, 4), sticky="ew")
+        ttk.Button(asset_actions, text="Visualizar frame MUNGED", style="Toolbar.TButton", command=self._preview_munged).grid(row=0, column=1, padx=(5, 0), pady=(0, 4), sticky="ew")
+        ttk.Button(asset_actions, text="Navegar animações…", style="Toolbar.TButton", command=self._open_animation_browser).grid(row=1, column=0, padx=(0, 5), sticky="ew")
+        ttk.Button(asset_actions, text="Aplicar MUNGED editado…", style="Toolbar.TButton", command=self._stage_munged).grid(row=1, column=1, padx=(5, 0), sticky="ew")
+        for column in range(2):
+            asset_actions.columnconfigure(column, weight=1)
 
-        profiles = ttk.Frame(root)
-        profiles.grid(row=6, column=0, columnspan=4, sticky="w", pady=(8, 0))
-        ttk.Button(profiles, text="Criar perfil de mod...", command=self._create_mod_profile).pack(side="left", padx=(0, 8))
-        ttk.Button(profiles, text="Revisar/Reaplicar perfil...", command=self._review_mod_profile).pack(side="left")
+        workspace_actions = ttk.LabelFrame(actions, text="Workspace", style="Section.TLabelframe")
+        workspace_actions.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(0, 6))
+        self.undo_button = ttk.Button(workspace_actions, text="Undo  Ctrl+Z", style="Toolbar.TButton", command=self._undo, state="disabled")
+        self.undo_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        self.redo_button = ttk.Button(workspace_actions, text="Redo  Ctrl+Y", style="Toolbar.TButton", command=self._redo, state="disabled")
+        self.redo_button.grid(row=0, column=1, padx=5, sticky="ew")
+        ttk.Button(workspace_actions, text="Abrir pasta de trabalho", style="Toolbar.TButton", command=self._open_workspace).grid(row=0, column=2, padx=5, sticky="ew")
+        ttk.Button(workspace_actions, text="Validar área de trabalho", style="Toolbar.TButton", command=self._validate_workspace).grid(row=0, column=3, padx=5, sticky="ew")
+        ttk.Button(workspace_actions, text="Reconstruir pacote modificado…", style="Accent.TButton", command=self._rebuild_package).grid(row=0, column=4, padx=(5, 0), sticky="ew")
+        for column in range(5):
+            workspace_actions.columnconfigure(column, weight=1)
 
-        note = ttk.Label(
-            root,
-            text="Para frames .munged, configure a pasta do projeto avatar-legends-tools. A GUI extrai para uma área de trabalho, "
-                 "abre a prévia PNG e reconstrói um .pak novo; ela nunca altera o pacote instalado.",
-            wraplength=920,
-            foreground="#7a4b00",
-        )
-        note.grid(row=7, column=0, columnspan=4, sticky="w", pady=(7, 4))
-        ttk.Label(root, textvariable=self.status).grid(row=8, column=0, columnspan=4, sticky="w")
-        root.columnconfigure(1, weight=1)
+        profiles = ttk.LabelFrame(actions, text="Mod profiles", style="Section.TLabelframe")
+        profiles.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        ttk.Button(profiles, text="Criar perfil de mod...", style="Toolbar.TButton", command=self._create_mod_profile).grid(row=0, column=0, padx=(0, 6), sticky="ew")
+        ttk.Button(profiles, text="Revisar/Reaplicar perfil...", style="Toolbar.TButton", command=self._review_mod_profile).grid(row=0, column=1, sticky="ew")
+        for column in (0, 1):
+            profiles.columnconfigure(column, weight=1)
+            actions.columnconfigure(column, weight=1, uniform="action_cards")
+
+        status_bar = ttk.Frame(root, padding=(2, 10, 2, 0))
+        status_bar.grid(row=5, column=0, sticky="ew")
+        ttk.Label(status_bar, textvariable=self.status, style="AppSubtitle.TLabel").pack(side="left", fill="x", expand=True)
+        ttk.Label(status_bar, text="Workspace changes are backed up", style="AppSubtitle.TLabel").pack(side="right")
+        root.columnconfigure(0, weight=1)
         root.rowconfigure(3, weight=1)
+        if not getattr(self, "_history_shortcuts_bound", False):
+            self.bind_all("<Control-z>", lambda event: self._history_shortcut("undo", event))
+            self.bind_all("<Control-y>", lambda event: self._history_shortcut("redo", event))
+            self._history_shortcuts_bound = True
+        self._refresh_history_buttons()
 
     def _change_language(self, _event=None) -> None:
         language = "pt" if self.language_box.get() == "Português" else "en"
@@ -205,6 +237,70 @@ class ModEngineGUI(tk.Tk):
                     break
             self._populate_entries()
         self.status.set("Idioma alterado." if language == "pt" else "Language changed.")
+
+    def _history_workspace_if_present(self) -> Path | None:
+        if not self.current_package:
+            return None
+        package_path = Path(self.current_package["path"])
+        folder = Path(__file__).resolve().parent / "workspaces" / f"{package_path.stem}_{self.current_package['sha256'][:8]}"
+        workspace = folder / package_path.stem
+        return workspace if workspace.is_dir() else None
+
+    def _refresh_history_buttons(self) -> None:
+        if self.undo_button is None or self.redo_button is None:
+            return
+        available = {"can_undo": False, "can_redo": False}
+        workspace = self._history_workspace_if_present()
+        if workspace and self.pending_operations == 0:
+            try:
+                available = workspace_history.state(workspace)
+            except Exception:
+                available = {"can_undo": False, "can_redo": False}
+        self.undo_button.configure(state="normal" if available["can_undo"] else "disabled")
+        self.redo_button.configure(state="normal" if available["can_redo"] else "disabled")
+
+    def _undo(self) -> None:
+        self._run_history_action("undo")
+
+    def _redo(self) -> None:
+        self._run_history_action("redo")
+
+    def _history_shortcut(self, direction: str, _event=None):
+        focus = self.focus_get()
+        if isinstance(focus, (ttk.Entry, ttk.Spinbox, tk.Entry, tk.Text)):
+            return None
+        self._run_history_action(direction)
+        return "break"
+
+    def _run_history_action(self, direction: str) -> None:
+        if self.pending_operations:
+            return
+        workspace = self._history_workspace_if_present()
+        if not workspace:
+            return
+        operation = workspace_history.undo if direction == "undo" else workspace_history.redo
+        if self.language.get() == "en":
+            self.status.set("Undoing workspace change..." if direction == "undo" else "Redoing workspace change...")
+        else:
+            self.status.set("Desfazendo alteração da área de trabalho..." if direction == "undo" else "Refazendo alteração da área de trabalho...")
+        self._run_background(lambda: operation(workspace), self._history_action_done)
+
+    def _history_action_done(self, result) -> None:
+        if isinstance(result, Exception):
+            self.status.set("History action failed" if self.language.get() == "en" else "Falha no histórico")
+            messagebox.showerror("History conflict" if self.language.get() == "en" else "Conflito no histórico", str(result))
+        else:
+            if self.language.get() == "en":
+                self.status.set(f"{result['direction'].title()} complete: {result['count']} file(s) restored.")
+            else:
+                word = "Desfeito" if result["direction"] == "undo" else "Refeito"
+                self.status.set(f"{word}: {result['count']} arquivo(s) restaurado(s).")
+            for browser in list(self.animation_browsers):
+                try:
+                    browser._workspace_history_changed()
+                except tk.TclError:
+                    pass
+        self._refresh_history_buttons()
 
     def _choose_game(self) -> None:
         selected = filedialog.askdirectory(title="Selecione a pasta de instalação")
@@ -242,6 +338,7 @@ class ModEngineGUI(tk.Tk):
             return
         self.current_package = result
         self._populate_entries()
+        self._refresh_history_buttons()
         self.status.set(f"Pacote carregado: {result['record_count']} arquivos; SHA-256 {result['sha256'][:16]}…")
 
     def _populate_entries(self) -> None:
@@ -446,36 +543,38 @@ class ModEngineGUI(tk.Tk):
                 f"Vou guardar uma cópia do frame atual e substituir este arquivo na área de trabalho:\n\n{entry['path']}\n\nContinuar?",
             ):
                 return
-            backup_dir = package_root.parent / ".mod_engine_backups"
-            backup_dir.mkdir(parents=True, exist_ok=True)
-            stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-            changes_path = package_root.parent / ".mod_engine_changes.json"
-            changes = json.loads(changes_path.read_text(encoding="utf-8")) if changes_path.is_file() else {"changes": []}
-            prior = {item["path"]: item for item in changes.get("changes", [])}
-            prior_item = prior.get(str(entry["path"]), {})
-            backup = Path(prior_item["backup"]) if prior_item.get("backup") and Path(prior_item["backup"]).is_file() else backup_dir / f"{destination.name}.{stamp}.bak"
-            if not backup.exists():
-                shutil.copy2(destination, backup)
-            shutil.copy2(replacement_path, destination)
-            export_manifest = json.loads((package_root.parent / f"{Path(self.current_package['path']).stem}.export-manifest.json").read_text(encoding="utf-8"))
-            original_hash = next(item["sha256"] for item in export_manifest["entries"] if item["path"] == entry["path"])
-            prior[str(entry["path"])] = {
-                "path": str(entry["path"]),
-                "original_sha256": original_hash,
-                "staged_sha256": pak_probe.sha256_file(destination),
-                "replacement_source": str(replacement_path),
-                "backup": str(backup),
-                "updated_at": stamp,
-            }
-            changes["changes"] = list(prior.values())
-            changes_path.write_text(json.dumps(changes, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            self.status.set(f"Frame editado aplicado à área de trabalho; backup: {backup}")
-            messagebox.showinfo(
-                "Frame aplicado",
-                f"O arquivo editado está na área de trabalho e será incluído no próximo PAK reconstruído.\n\nBackup:\n{backup}",
-            )
+            self.status.set("Aplicando frame à área de trabalho...")
+
+            def work():
+                backup_dir = package_root.parent / ".mod_engine_backups"
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                changes_path = package_root.parent / ".mod_engine_changes.json"
+                changes = json.loads(changes_path.read_text(encoding="utf-8")) if changes_path.is_file() else {"changes": []}
+                previous = next((item for item in changes.get("changes", []) if item["path"] == str(entry["path"])), {})
+                backup = Path(previous["backup"]) if previous.get("backup") and Path(previous["backup"]).is_file() else backup_dir / f"{destination.name}.{stamp}.bak"
+                if not backup.exists():
+                    shutil.copy2(destination, backup)
+                workspace_history.apply_changes(
+                    package_root, [(str(entry["path"]), replacement_path)],
+                    "Replace edited MUNGED frame", {str(entry["path"]): backup},
+                )
+                return {"path": str(entry["path"]), "backup": str(backup)}
+
+            self._run_background(work, self._stage_munged_done)
         except Exception as exc:
             messagebox.showerror("Falha ao aplicar frame", str(exc))
+
+    def _stage_munged_done(self, result) -> None:
+        if isinstance(result, Exception):
+            self.status.set(f"Falha ao aplicar frame: {result}")
+            messagebox.showerror("Falha ao aplicar frame", str(result))
+            return
+        self.status.set(f"Frame editado aplicado à área de trabalho; backup: {result['backup']}")
+        messagebox.showinfo(
+            "Frame aplicado",
+            f"O arquivo editado está na área de trabalho e será incluído no próximo PAK reconstruído.\n\nBackup:\n{result['backup']}",
+        )
 
     def _stage_munged_batch(self, package: dict[str, object], package_root: Path, entries, replacement_dir: Path, callback) -> None:
         try:
@@ -531,9 +630,6 @@ class ModEngineGUI(tk.Tk):
                 changes_path = package_root.parent / ".mod_engine_changes.json"
                 changes = json.loads(changes_path.read_text(encoding="utf-8")) if changes_path.is_file() else {"changes": []}
                 prior = {item["path"]: item for item in changes.get("changes", [])}
-                export_manifest_path = package_root.parent / f"{Path(package['path']).stem}.export-manifest.json"
-                export_manifest = json.loads(export_manifest_path.read_text(encoding="utf-8"))
-                original_hashes = {item["path"]: item["sha256"] for item in export_manifest["entries"]}
                 staged_backups = []
                 stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                 for entry, source, destination in selected:
@@ -541,33 +637,13 @@ class ModEngineGUI(tk.Tk):
                     backup = Path(old_backup) if old_backup and Path(old_backup).is_file() else backup_dir / f"{destination.name}.{stamp}.bak"
                     if not backup.exists():
                         shutil.copy2(destination, backup)
-                    rollback_copy = backup_dir / f"{destination.name}.{stamp}.rollback"
-                    shutil.copy2(destination, rollback_copy)
-                    staged_backups.append((entry, source, destination, backup, rollback_copy))
-                applied = []
-                try:
-                    for entry, source, destination, backup, rollback_copy in staged_backups:
-                        shutil.copy2(source, destination)
-                        applied.append((destination, rollback_copy))
-                except Exception:
-                    for destination, backup in reversed(applied):
-                        shutil.copy2(backup, destination)
-                    raise
-                else:
-                    for _entry, _source, _destination, _backup, rollback_copy in staged_backups:
-                        rollback_copy.unlink(missing_ok=True)
-
-                for entry, source, destination, backup, _rollback_copy in staged_backups:
-                    prior[str(entry["path"])] = {
-                        "path": str(entry["path"]),
-                        "original_sha256": original_hashes.get(str(entry["path"])),
-                        "staged_sha256": pak_probe.sha256_file(destination),
-                        "replacement_source": str(source),
-                        "backup": str(backup),
-                        "updated_at": stamp,
-                    }
-                changes["changes"] = list(prior.values())
-                changes_path.write_text(json.dumps(changes, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    staged_backups.append((entry, source, backup))
+                workspace_history.apply_changes(
+                    package_root,
+                    [(str(entry["path"]), source) for entry, source, _backup in staged_backups],
+                    f"Replace {len(staged_backups)} animation frame(s)",
+                    {str(entry["path"]): backup for entry, _source, backup in staged_backups},
+                )
                 return {"count": len(selected), "paths": [str(entry["path"]) for entry, _source, _destination in selected]}
 
             self._run_background(work, callback)
@@ -862,6 +938,8 @@ class ModEngineGUI(tk.Tk):
         )
 
     def _run_background(self, operation, callback) -> None:
+        self.pending_operations += 1
+        self._refresh_history_buttons()
         def run():
             try:
                 self.results.put((callback, operation(), None))
@@ -873,6 +951,8 @@ class ModEngineGUI(tk.Tk):
         try:
             while True:
                 callback, value, error = self.results.get_nowait()
+                self.pending_operations = max(0, self.pending_operations - 1)
+                self._refresh_history_buttons()
                 callback(error if error else value)
         except queue.Empty:
             pass
@@ -958,6 +1038,7 @@ class AnimationBrowser(tk.Toplevel):
         self.minsize(900, 600)
         self.package = package
         self.engine = parent
+        self.engine.animation_browsers.append(self)
         self.workspace = workspace
         self.decoder = decoder
         self.results: queue.Queue = queue.Queue()
@@ -1266,7 +1347,20 @@ class AnimationBrowser(tk.Toplevel):
     def _close(self) -> None:
         self.closed = True
         self._stop_playback()
+        if self in self.engine.animation_browsers:
+            self.engine.animation_browsers.remove(self)
         self.destroy()
+
+    def _workspace_history_changed(self) -> None:
+        changes_path = self.workspace.parent / ".mod_engine_changes.json"
+        try:
+            self.modified_paths = {
+                item["path"] for item in json.loads(changes_path.read_text(encoding="utf-8")).get("changes", [])
+            } if changes_path.is_file() else set()
+        except (OSError, ValueError, KeyError, TypeError):
+            self.modified_paths = set()
+        if self.character.get() and self.motion.get():
+            self._motion_changed()
 
 
 if __name__ == "__main__":

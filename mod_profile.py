@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 
 import pak_probe
+import workspace_history
 
 
 def _assets_dir(profile_path: Path) -> Path:
@@ -115,66 +116,39 @@ def compare_profile(profile: dict, package: dict, workspace: Path) -> list[dict]
 
 
 def reapply_profile(profile_path: Path, profile: dict, package: dict, workspace: Path, decoder: Path, run_tool) -> int:
-    changes_path = workspace.parent / ".mod_engine_changes.json"
-    doc = json.loads(changes_path.read_text(encoding="utf-8")) if changes_path.is_file() else {"changes": []}
-    prior = {row["path"]: row for row in doc.get("changes", [])}
-    export = json.loads((workspace.parent / f"{Path(package['path']).stem}.export-manifest.json").read_text(encoding="utf-8"))
-    original = {row["path"]: row for row in export["entries"]}
     indexed = {row["path"] for row in package["entries"]}
     assets = _assets_dir(profile_path)
-    backup_dir = workspace.parent / ".mod_engine_backups"
-    backup_dir.mkdir(exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    rows = []
-    for index, change in enumerate(profile["changes"]):
+    replacements = []
+    munged = []
+    for change in profile["changes"]:
         relative = change["path"]
-        if relative not in indexed or relative not in original:
-            raise ValueError(f"Caminho do perfil não existe no pacote atual: {relative}")
-        dest = workspace.joinpath(*PurePosixPath(relative).parts)
+        if relative not in indexed:
+            raise ValueError(f"Profile path is missing from the selected package: {relative}")
         asset = assets.joinpath(*PurePosixPath(change["replacement_asset"]).parts)
-        backup = Path(prior.get(relative, {}).get("backup", ""))
-        if not backup.is_file():
-            backup = backup_dir / f"profile_{stamp}_{index:04d}.bak"
-            shutil.copy2(dest, backup)
-        rollback = backup_dir / f"profile_{stamp}_{index:04d}.rollback"
-        shutil.copy2(dest, rollback)
-        rows.append((change, asset, dest, backup, rollback))
-    munged = [(change, asset) for change, asset, *_ in rows if change["path"].lower().endswith(".munged")]
+        replacements.append((relative, asset))
+        if relative.lower().endswith(".munged"):
+            munged.append((change, asset))
     if munged:
         import tempfile
         validation_root = workspace.parent / ".mod_engine_previews"
         validation_root.mkdir(exist_ok=True)
         run_dir = Path(tempfile.mkdtemp(prefix="profile_validate_", dir=validation_root))
         input_dir, output_dir = run_dir / "input", run_dir / "output"
-        input_dir.mkdir(); output_dir.mkdir()
+        input_dir.mkdir()
+        output_dir.mkdir()
         names = set()
         for change, asset in munged:
             name = PurePosixPath(change["path"]).name
             if name.casefold() in names:
-                raise ValueError("O perfil tem nomes MUNGED repetidos; não é possível validar em lote.")
+                raise ValueError("Duplicate MUNGED names in profile prevent batch validation.")
             names.add(name.casefold())
             shutil.copy2(asset, input_dir / name)
         run_tool([str(Path(__import__("sys").executable)), str(decoder), str(input_dir), str(output_dir)])
         decoded = {path.stem.casefold() for path in output_dir.rglob("*.png")}
-        failed = [change["path"] for change, _ in munged if PurePosixPath(change["path"]).stem.casefold() not in decoded]
+        failed = [change["path"] for change, _asset in munged if PurePosixPath(change["path"]).stem.casefold() not in decoded]
         if failed:
-            raise ValueError("Frames MUNGED não decodificados: " + ", ".join(failed[:8]))
-    applied = []
-    try:
-        for change, asset, dest, _backup, rollback in rows:
-            shutil.copy2(asset, dest)
-            applied.append((dest, rollback))
-    except Exception:
-        for dest, rollback in reversed(applied):
-            shutil.copy2(rollback, dest)
-        raise
-    for change, asset, dest, backup, rollback in rows:
-        rollback.unlink(missing_ok=True)
-        prior[change["path"]] = {
-            "path": change["path"], "original_sha256": original[change["path"]]["sha256"],
-            "staged_sha256": pak_probe.sha256_file(dest), "replacement_source": str(asset),
-            "backup": str(backup), "profile": str(profile_path), "updated_at": stamp,
-        }
-    doc["changes"] = list(prior.values())
-    changes_path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return len(rows)
+            raise ValueError("Profile MUNGED frames failed to decode: " + ", ".join(failed[:8]))
+    workspace_history.apply_changes(
+        workspace, replacements, "Reapply mod profile", metadata={"profile": str(profile_path)}
+    )
+    return len(replacements)

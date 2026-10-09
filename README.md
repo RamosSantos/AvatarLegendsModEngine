@@ -13,6 +13,7 @@ A Windows desktop utility for inspecting Avatar Legends: The Fighting Game `.pak
 - Preview MUNGED frames as PNG using the external `avatar-legends-tools` decoder.
 - Browse recognized characters and motions, play frame sequences, and select one or several frames for replacement.
 - Stage edits in a workspace with backups and a change manifest. The installed package is not edited by the GUI.
+- Undo and redo staged workspace operations, including frame batches and profile reapplication. `Ctrl+Z` undoes and `Ctrl+Y` redoes; history checks file hashes and stops if a file changed outside the tool.
 - Validate the workspace file inventory and hashes, and decode changed MUNGED files before rebuilding.
 - Rebuild a candidate `.pak` with the external packer and compare the rebuilt index and every payload hash against the workspace.
 - Create portable mod profiles containing a readable JSON description, replacement assets, original payload backups, and SHA-256 hashes. Review a profile against another package and reapply it to that package's workspace.
@@ -54,6 +55,10 @@ If the tools folder is moved, configure its new location once. The saved INI con
 
 The direct **Replace selected file** action uses the standalone same-size replacement writer; its replacement must match the original payload size. The workspace rebuild path uses the external packer and can handle size changes if that packer supports the particular asset and archive.
 
+Use the **Undo** and **Redo** controls in the Workspace group, or press `Ctrl+Z` and `Ctrl+Y`, to step backward and forward through staged replacements. A batch replacement or profile reapplication is one history step. If a workspace file no longer matches the saved history hash, the operation is refused to avoid overwriting an external edit. History snapshots use additional disk space and are stored beside each workspace.
+
+Undo/redo history begins recording operations from the version that introduced this feature. Older staged changes remain in the workspace, but cannot be undone through this history because their before/after snapshots were not recorded.
+
 ## Mod profiles
 
 Profiles are useful for review, archival, or carrying changes to a newer version of a package.
@@ -76,6 +81,8 @@ The GUI creates these directories beside the application when needed:
 - `profiles/` — the suggested destination for new mod profiles.
 
 Generated files can be large. Keep a copy of any profile's `.assets` folder; it is required to verify or reapply that profile. `mod_engine.ini` stores the local path to the external tools project.
+
+Each package workspace stores `.mod_engine_history.json` and a `.mod_engine_history/` folder containing the undo/redo stacks and before/after snapshots.
 
 ## Command-line package utility
 
@@ -131,6 +138,7 @@ These observations come from inspecting the installed packages and executable. T
 - `localization.py` — English/Portuguese interface translations (English is the default).
 - `docs/images/mod-engine-banner.svg` — original vector artwork used at the top of this README.
 - `mod_profile.py` — portable profile creation, validation, comparison, and reapplication.
+- `workspace_history.py` — hash-checked undo/redo snapshots for staged workspace changes.
 - `pak_probe.py` — read-only package parser, bounded extractor, and same-size candidate writer.
 - `FINDINGS.md` — reverse-engineering observations and unresolved questions.
 - `VALIDATION.md` — record of the structural and hash checks performed.
