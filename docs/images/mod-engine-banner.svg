@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Avatar Legends Mod Engine</title>
+  <desc id="desc">A stylized archive editor interface with an asset list, pixel animation frames, and a validated package profile.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101c2d"/>
+      <stop offset="1" stop-color="#1b3344"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#49d6c4"/>
+      <stop offset="1" stop-color="#83efd4"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="15" flood-color="#07111d" flood-opacity=".42"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="420" rx="26" fill="url(#bg)"/>
+  <circle cx="1090" cy="38" r="190" fill="#45cdbb" opacity=".07"/>
+  <circle cx="1010" cy="390" r="250" fill="#63a8ff" opacity=".05"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <g transform="translate(70 82)">
+      <rect width="58" height="58" rx="16" fill="#193c4a" stroke="#49d6c4" stroke-opacity=".55"/>
+      <path d="M17 20h24l8 8v19H17z" fill="none" stroke="url(#accent)" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M41 20v9h8M23 35h20M23 41h15" fill="none" stroke="#e8fbf8" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="0" y="112" fill="#f4fbff" font-size="38" font-weight="700">Avatar Legends</text>
+      <text x="0" y="157" fill="#f4fbff" font-size="38" font-weight="700">Mod Engine</text>
+      <rect x="0" y="183" width="74" height="4" rx="2" fill="url(#accent)"/>
+      <text x="0" y="222" fill="#b6c9d5" font-size="18">Inspect. Edit. Validate. Rebuild.</text>
+      <g transform="translate(0 255)" font-size="13" font-weight="600">
+        <rect width="104" height="30" rx="15" fill="#234554"/>
+        <text x="52" y="20" text-anchor="middle" fill="#9cebdd">PAK WORKSPACE</text>
+        <rect x="114" width="106" height="30" rx="15" fill="#234554"/>
+        <text x="167" y="20" text-anchor="middle" fill="#9cebdd">FRAME BROWSER</text>
+      </g>
+    </g>
+
+    <g transform="translate(525 48)" filter="url(#shadow)">
+      <rect width="600" height="324" rx="18" fill="#f7fafc"/>
+      <path d="M18 0h564a18 18 0 0 1 18 18v30H0V18A18 18 0 0 1 18 0" fill="#e8eef3"/>
+      <circle cx="23" cy="24" r="5" fill="#f07e78"/>
+      <circle cx="42" cy="24" r="5" fill="#edc268"/>
+      <circle cx="61" cy="24" r="5" fill="#66c69b"/>
+      <text x="84" y="29" fill="#4b5d6b" font-size="13" font-weight="600">sprites.pak  /  Workspace</text>
+      <rect x="22" y="68" width="204" height="230" rx="10" fill="#edf2f6"/>
+      <text x="40" y="96" fill="#617584" font-size="12" font-weight="700">PACKAGE ASSETS</text>
+      <g font-size="13" fill="#536776">
+        <text x="43" y="129">▸ characters</text>
+        <text x="59" y="156">▾ animation frames</text>
+        <rect x="38" y="168" width="173" height="29" rx="6" fill="#d4f5ef"/>
+        <text x="57" y="187" fill="#177d72" font-weight="700">frame_014.munged</text>
+        <text x="57" y="220">frame_015.munged</text>
+        <text x="57" y="251">frame_016.munged</text>
+        <text x="43" y="282">▸ palettes</text>
+      </g>
+      <rect x="246" y="68" width="332" height="230" rx="10" fill="#172838"/>
+      <text x="266" y="95" fill="#b7c9d4" font-size="12" font-weight="700">ANIMATION PREVIEW</text>
+      <rect x="266" y="108" width="292" height="136" rx="8" fill="#213b4b"/>
+      <g transform="translate(302 132)" shape-rendering="crispEdges">
+        <rect x="28" y="0" width="28" height="28" fill="#f0bf87"/>
+        <rect x="22" y="28" width="42" height="38" fill="#46cdb9"/>
+        <rect x="8" y="34" width="14" height="12" fill="#f0bf87"/>
+        <rect x="64" y="34" width="14" height="12" fill="#f0bf87"/>
+        <rect x="29" y="66" width="14" height="30" fill="#5279b7"/>
+        <rect x="46" y="66" width="14" height="30" fill="#5279b7"/>
+        <rect x="11" y="95" width="32" height="9" fill="#e9f2f5"/>
+        <rect x="45" y="95" width="33" height="9" fill="#e9f2f5"/>
+        <rect x="83" y="20" width="6" height="38" fill="#d5edf0" opacity=".85"/>
+        <rect x="90" y="11" width="6" height="56" fill="#d5edf0" opacity=".65"/>
+      </g>
+      <g transform="translate(425 126)">
+        <rect width="117" height="28" rx="14" fill="#1d4a50"/>
+        <circle cx="15" cy="14" r="5" fill="#5de0be"/>
+        <text x="28" y="18" fill="#a7f0df" font-size="11" font-weight="700">HASHES VERIFIED</text>
+        <text x="0" y="61" fill="#e1edf3" font-size="12">Original  6f23...ad91</text>
+        <text x="0" y="83" fill="#e1edf3" font-size="12">Modified  c821...b044</text>
+      </g>
+      <g transform="translate(266 263)">
+        <rect width="83" height="24" rx="6" fill="#d9e4eb"/>
+        <rect x="91" width="83" height="24" rx="6" fill="#d9e4eb"/>
+        <rect x="182" width="110" height="24" rx="6" fill="#168f83"/>
+        <text x="41" y="16" text-anchor="middle" fill="#405666" font-size="10" font-weight="700">BACKUPS</text>
+        <text x="132" y="16" text-anchor="middle" fill="#405666" font-size="10" font-weight="700">PROFILE</text>
+        <text x="237" y="16" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">BUILD CANDIDATE</text>
+      </g>
+    </g>
+  </g>
+</svg>

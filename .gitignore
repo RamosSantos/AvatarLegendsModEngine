@@ -1,0 +1,21 @@
+﻿# Local configuration
+mod_engine.ini
+
+# Extracted game content, backups, previews, and rebuilt candidates
+workspaces/
+exports/
+builds/
+profiles/
+*.pak
+*.pak.manifest.json
+*.modprofile.json
+*.modprofile.assets/
+*.export-manifest.json
+.mod_engine_*
+
+# External tools are installed separately and are not part of this repository
+avatar-legends-tools/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
