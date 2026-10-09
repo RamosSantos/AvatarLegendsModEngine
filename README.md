@@ -1,10 +1,11 @@
 # Avatar Legends Mod Engine
 
 ![Avatar Legends Mod Engine banner](docs/images/mod-engine-banner.svg)
+![GUI](docs/images/image.png)
 
 A Windows desktop utility for inspecting Avatar Legends: The Fighting Game `.pak` archives, browsing and replacing MUNGED animation frames, validating edits, rebuilding candidate archives, and saving portable mod profiles.
 
-> **Status: experimental.** Archive inspection and extraction have been checked against the shipped `sprites.pak`. A same-size no-op rebuild preserves the original package byte-for-byte. A behavior-changing mod has not yet been verified in game. Treat rebuilt archives as candidates and keep backups of anything you choose to replace manually.
+> **Status: experimental.** Archive inspection and extraction have been checked against the shipped `sprites.pak`. A same-size no-op rebuild preserves the original package byte-for-byte. Treat rebuilt archives as candidates and keep backups of anything you choose to replace manually.
 
 ## Features
 
