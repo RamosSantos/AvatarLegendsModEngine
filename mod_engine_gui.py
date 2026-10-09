@@ -52,7 +52,9 @@ class ModEngineGUI(tk.Tk):
         self.packages: list[Path] = []
         self.current_package: dict[str, object] | None = None
         self.entries_by_iid: dict[str, dict[str, object]] = {}
+        self._entry_render_generation = 0
         self.results: queue.Queue = queue.Queue()
+        self.pending_operations = 0
         self.animation_browsers = []
 
         self._build()
@@ -342,19 +344,30 @@ class ModEngineGUI(tk.Tk):
         self.status.set(f"Pacote carregado: {result['record_count']} arquivos; SHA-256 {result['sha256'][:16]}…")
 
     def _populate_entries(self) -> None:
+        self._entry_render_generation += 1
+        generation = self._entry_render_generation
         self.tree.delete(*self.tree.get_children())
         self.entries_by_iid.clear()
         if not self.current_package:
             return
         needle = self.filter_text.get().casefold().strip()
-        shown = 0
-        for entry in self.current_package["entries"]:
-            if needle and needle not in entry["path"].casefold():
-                continue
-            iid = self.tree.insert("", "end", values=(entry["path"], entry["payload_size"], entry["payload_offset"]))
-            self.entries_by_iid[iid] = entry
-            shown += 1
-        self.count_label.configure(text=f"{shown} de {self.current_package['record_count']} arquivos")
+        entries = [
+            entry for entry in self.current_package["entries"]
+            if not needle or needle in entry["path"].casefold()
+        ]
+        self.count_label.configure(text=f"{len(entries)} de {self.current_package['record_count']} arquivos")
+
+        def insert_batch(start: int) -> None:
+            if generation != self._entry_render_generation:
+                return
+            end = min(start + 400, len(entries))
+            for entry in entries[start:end]:
+                iid = self.tree.insert("", "end", values=(entry["path"], entry["payload_size"], entry["payload_offset"]))
+                self.entries_by_iid[iid] = entry
+            if end < len(entries):
+                self.after(1, insert_batch, end)
+
+        insert_batch(0)
 
     def _extract(self) -> None:
         if not self.current_package:

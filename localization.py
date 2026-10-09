@@ -257,7 +257,15 @@ def install() -> None:
     original_insert = ttk.Treeview.insert
     def insert(widget, parent, index, iid=None, **kwargs):
         if "values" in kwargs:
-            kwargs["values"] = tuple(tr(value) for value in kwargs["values"])
+            # Treeviews also contain arbitrary asset paths and hashes. Running
+            # the full prose translator (regexes and fragment replacements)
+            # for every cell made large package listings painfully slow.
+            # Only translate exact, known UI values here.
+            mapping = EN if LANGUAGE == "en" else PT_ENGLISH
+            kwargs["values"] = tuple(
+                mapping.get(value, value) if isinstance(value, str) else value
+                for value in kwargs["values"]
+            )
         return original_insert(widget, parent, index, iid=iid, **kwargs)
     ttk.Treeview.insert = insert
 
